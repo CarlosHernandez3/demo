@@ -8,7 +8,53 @@ inbound_df = pd.read_csv("./data/phx_inbound.csv")
 inbound_df['calendar_date'] = pd.to_datetime(inbound_df['calendar_date'])
 inbound_df['year_month'] = inbound_df['calendar_date'].dt.to_period('M').astype(str)
 
-# Sidebar menu 
+outbound_df = pd.read_csv("./data/phx_outbound.csv")
+
+# Add derived month column
+inbound_df['year_month'] = inbound_df['calendar_date'].dt.to_period('M').astype(str)
+
+# Metric 1: Total Received Cases This Month 
+current_month = pd.Timestamp.now().to_period('M').strftime('%Y-%m')
+received_this_month = inbound_df.loc[inbound_df['year_month'] == current_month, 'hdr_received_cases_qty'].sum()
+
+# Metric 2: Top 1 Vendor by Volume 
+vendor_summary = (
+    inbound_df.groupby("received_from_vendor_name")["hdr_received_cases_qty"]
+    .sum()
+    .reset_index()
+    .sort_values(by="hdr_received_cases_qty", ascending=False)
+)
+top_vendor = vendor_summary.iloc[0]['received_from_vendor_name']
+top_vendor_cases = int(vendor_summary.iloc[0]['hdr_received_cases_qty'])
+
+# Metric 3: Receiving Accuracy Rate 
+total_received_bottles = inbound_df['hdr_received_bottles_qty'].sum()
+total_shipped_bottles = inbound_df['hdr_shipped_bottles_qty'].sum()
+accuracy = (total_received_bottles / total_shipped_bottles) * 100 if total_shipped_bottles else 0
+accuracy = round(accuracy, 1)
+
+# Display Metrics in Columns
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        label="Total Received Cases (This Month)",
+        value=f"{int(received_this_month):,} Cases"
+    )
+
+with col2:
+    st.metric(
+        label="Top Vendor by Volume",
+        value=f"{top_vendor}: {top_vendor_cases:,} Cases"
+    )
+
+with col3:
+    st.metric(
+        label="Receiving Accuracy Rate",
+        value=f"{accuracy:.1f}%",
+    )
+
+# chart selection menu 
 chart_type = st.selectbox(
     "Select a chart to view:",
     ("Monthly Received Cases", "Daily Received Cases", "Vendor Performance")
