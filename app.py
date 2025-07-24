@@ -1,4 +1,8 @@
 import streamlit as st
 
-pg = st.navigation(st.Page("chatbot.py"), st.Page("dashboard.py"), position="top")
+pages = [
+    st.Page("chatbot.py"),
+    st.Page("dashboard.py")
+]
+pg = st.navigation(pages, position="top")
 pg.run()
