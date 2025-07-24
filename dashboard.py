@@ -3,18 +3,18 @@ import plotly.express as px
 import streamlit as st
 import plotly.graph_objects as go
 
-# --- Load and preprocess data ---
+# Load and preprocess data 
 inbound_df = pd.read_csv("./data/phx_inbound.csv")
 inbound_df['calendar_date'] = pd.to_datetime(inbound_df['calendar_date'])
 inbound_df['year_month'] = inbound_df['calendar_date'].dt.to_period('M').astype(str)
 
-# --- Sidebar menu ---
+# Sidebar menu 
 chart_type = st.selectbox(
     "Select a chart to view:",
     ("Monthly Received Cases", "Daily Received Cases", "Vendor Performance")
 )
 
-# --- Chart: Monthly Received Cases ---
+# Chart: Monthly Received Cases 
 if chart_type == "Monthly Received Cases":
     monthly_cases = (
         inbound_df.groupby('year_month')['hdr_received_cases_qty']
@@ -35,7 +35,7 @@ if chart_type == "Monthly Received Cases":
     fig.update_xaxes(type='category')
     st.plotly_chart(fig)
 
-# --- Chart: Daily Received Cases ---
+# Chart: Daily Received Cases 
 elif chart_type == "Daily Received Cases":
     daily_cases = (
         inbound_df.groupby('calendar_date')['hdr_received_cases_qty']
@@ -54,7 +54,7 @@ elif chart_type == "Daily Received Cases":
     fig.update_layout(xaxis_title='Date', yaxis_title='Cases Received', title_x=0.5)
     st.plotly_chart(fig)
 
-# --- Chart: Vendor Performance ---
+# Chart: Vendor Performance 
 elif chart_type == "Vendor Performance":
     vendor_perf = (
         inbound_df.groupby('received_from_vendor_name')
