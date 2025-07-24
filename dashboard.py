@@ -24,7 +24,8 @@ vendor_summary = (
     .reset_index()
     .sort_values(by="hdr_received_cases_qty", ascending=False)
 )
-top_vendor = vendor_summary.iloc[0]['received_from_vendor_name']
+top_vendor_full = vendor_summary.iloc[0]['received_from_vendor_name']
+top_vendor = str(top_vendor_full).split()[0]
 top_vendor_cases = int(vendor_summary.iloc[0]['hdr_received_cases_qty'])
 
 # Metric 3: Receiving Accuracy Rate 
@@ -44,13 +45,13 @@ with col1:
 
 with col2:
     st.metric(
-        label="Top Vendor by Volume",
-        value=f"{top_vendor}: {top_vendor_cases:,} Cases"
+        label="Top Vendor by Volume (Cases)",
+        value=f"{top_vendor}: {top_vendor_cases:,}"
     )
 
 with col3:
     st.metric(
-        label="Receiving Accuracy Rate",
+        label="Inventory Turnover Rate",
         value=f"{accuracy:.1f}%",
     )
 
