@@ -78,12 +78,3 @@ elif chart_type == "Vendor Performance":
     fig.update_traces(texttemplate='%{text:.2s}', textposition='outside')
     fig.update_layout(xaxis_title='Vendor', yaxis_title='Discrepancy', title_x=0.5)
     st.plotly_chart(fig)
-
-
-
-
-
-
-# not my code 
-
- 
