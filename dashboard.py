@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Ankaa Global Logistics Dashboard",
-    page_icon="📊",
+    page_icon=":a:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -24,13 +24,14 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-alt.themes.enable("dark")
+#alt.theme.background("light")
 
 # Load and preprocess data 
 inbound_df = pd.read_csv("./data/phx_inbound.csv")
 inbound_df['calendar_date'] = pd.to_datetime(inbound_df['calendar_date'])
 inbound_df['year_month'] = inbound_df['calendar_date'].dt.to_period('M').astype(str)
 outbound_df = pd.read_csv("./data/phx_outbound.csv")
+items_df = pd.read_csv("./data/phx_items.csv")
 
 # Get current date and week boundaries
 today = pd.Timestamp.now()
@@ -78,6 +79,99 @@ while len(top_customers) < 3:
 
 # Total number of customers
 total_customers = inbound_df['received_from_vendor_name'].nunique()
+
+# SKU Active/Inactive/Discontinued Donut Chart
+def create_sku_donut_chart():
+    # Process SKU status data
+    sku_status_counts = items_df['scm_item_status_desc'].value_counts()
+    
+    # Map the statuses and get counts
+    active_skus = sku_status_counts.get('Sku Active', 0)
+    inactive_skus = sku_status_counts.get('Blank As Valid', 0)
+    discontinued_skus = sku_status_counts.get('Discontinued', 0)     
+    total_skus = active_skus + inactive_skus + discontinued_skus
+    
+    # Create the donut chart
+    fig = go.Figure(data=[go.Pie(
+        labels=['Active', 'Inactive', 'Discontinued'],
+        values=[active_skus, inactive_skus, discontinued_skus],
+        hole=0.4,
+        marker_colors=['#2ca02c', '#ffa500', '#ff4b4b'],  # Green for active, orange for inactive, red for discontinued
+        textinfo='label+percent',
+        textfont_size=14,
+        hovertemplate='<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
+    )])
+    
+    # Update layout with center annotation
+    fig.update_layout(
+        title={
+            'text': 'SKU Status',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16}
+        },
+        annotations=[
+            dict(
+                text=f'<b>{total_skus}</b><br>Total<br>SKUs',
+                x=0.5, y=0.5,
+                font_size=12,
+                showarrow=False,
+                xanchor="center",
+                yanchor="middle"
+            )
+        ],
+        showlegend=False,
+        margin=dict(t=50, b=50, l=50, r=50),
+        height=300
+    )
+    
+    return fig
+
+# Customer Active/Inactive Donut Chart
+def create_customer_donut_chart():
+    # Sample data - replace with your actual logic
+    total_customers_count = total_customers  # Using your existing variable
+    
+    # Sample active/inactive logic - you'll need to replace this with your actual data
+    # For example, you might determine active customers based on recent orders
+    active_customers = int(total_customers_count * 0.75)  # 75% active (sample)
+    inactive_customers = total_customers_count - active_customers
+    
+    # Create the donut chart
+    fig = go.Figure(data=[go.Pie(
+        labels=['Active', 'Inactive'],
+        values=[active_customers, inactive_customers],
+        hole=0.4,
+        marker_colors=['#2ca02c', '#ff4b4b'],  # Green for active, red for inactive
+        textinfo='label+percent',
+        textfont_size=14,
+        hovertemplate='<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
+    )])
+    
+    # Update layout with center annotation
+    fig.update_layout(
+        title={
+            'text': 'Customer Status',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16}
+        },
+        annotations=[
+            dict(
+                text=f'<b>{total_customers_count}</b><br>Total<br>Customers',
+                x=0.5, y=0.5,
+                font_size=12,
+                showarrow=False,
+                xanchor="center",
+                yanchor="middle"
+            )
+        ],
+        showlegend=False,
+        margin=dict(t=50, b=50, l=50, r=50),
+        height=300
+    )
+    
+    return fig
 
 # Monthly inbound and outbound data for chart (filtered and cleaned)
 # Convert date fields to datetime first, then filter
@@ -258,12 +352,12 @@ wave_counts = outbound_df['wave_desc'].fillna('Unknown').value_counts()
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("Ankaa_logo.jpg", width=120)
-    st.markdown("<h4 style='text-align: center;'>Ankaa Global Logistics</h4>", unsafe_allow_html=True)
+    st.image("Ankaa_logo.jpg", use_container_width= True)
+    st.markdown("<h2 style='text-align: center;'>Ankaa Global Logistics</h2>", unsafe_allow_html=True)
     selected = option_menu(
         menu_title=None,
         options=["Admin Dashboard", "Customers", "New Customer", "Value Added Services"],
-        icons=["house", "arrow-down-circle", "arrow-right-circle", "arrow-left-circle", "envelope", "box"],
+        icons=["house-fill", "people-fill", "person-plus-fill", "box-seam-fill"],
         menu_icon="cast",
         default_index=0
     )
@@ -272,38 +366,50 @@ with st.sidebar:
 # Single column layout when Customers is selected, otherwise two columns
 if selected == "Customers":
     # Full width single column for Customers tab
-    st.header("👥 Customer Overview")
+    st.subheader("👥 Customer Overview")
+    st.divider()
     
-    # Top metrics row
-    st.markdown(f"<h5 style='text-align: right; margin-bottom: 10px;'><span style='color: white;'>Total Number of Customers: </span><span style='color: #2ca02c;'>{total_customers:,}</span></h5>", unsafe_allow_html=True)    
     # Top 3 customers section
-    st.subheader("🏆 Top 3 Customers by Volume")
-    
-    cust_col1, cust_col2, cust_col3 = st.columns(3)
-    
+    st.markdown(f"<h4>Top 3 Customers by Volume</h4>", unsafe_allow_html=True)
+
+    st.markdown("""
+       <style>
+        [data-testid="stMetricValue"] {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1f77b4;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    cust_col1, cust_col2, cust_col3 = st.columns([1,2,2])
+            
     with cust_col1:
         st.metric(
             label="🥇 #1 Customer",
             value=top_customers[0][0],
             delta=f"{top_customers[0][1]:,} Cases"
         )
-    
-    with cust_col2:
         st.metric(
             label="🥈 #2 Customer", 
             value=top_customers[1][0],
             delta=f"{top_customers[1][1]:,} Cases"
         )
-    
-    with cust_col3:
         st.metric(
             label="🥉 #3 Customer",
             value=top_customers[2][0], 
             delta=f"{top_customers[2][1]:,} Cases"
         )
-    
+
+    with cust_col2:
+        customer_donut_fig = create_customer_donut_chart()
+        st.plotly_chart(customer_donut_fig, use_container_width=True)
+            
+    with cust_col3:
+        sku_donut_fig = create_sku_donut_chart()
+        st.plotly_chart(sku_donut_fig, use_container_width=True)
+            
     st.markdown("---")
-    
     # Monthly inbound vs outbound chart with customer filter
     st.subheader("📊 Monthly Inbound vs Outbound Volume")
     
@@ -344,11 +450,12 @@ if selected == "Customers":
 
 elif selected == "Admin Dashboard":
     # Two columns: main (wide) and side (narrow) for other tabs
-    col_main, col_side = st.columns([3, 1], gap='large')
+    col_main, col_side = st.columns([2, 1], gap='small')
 
     with col_main:
         st.subheader("📊 Weekly Summary")
-        kpi1, kpi2, kpi3 = st.columns(3)
+        st.divider()
+        kpi1, kpi2, kpi3 = st.columns(3, gap='small')
         with kpi1:
             st.markdown("**Total SKUs Received (WTD)**")
             st.markdown(f"<h2 style='color:#1f77b4'>{weekly_sku_count}</h2>", unsafe_allow_html=True)
@@ -358,7 +465,7 @@ elif selected == "Admin Dashboard":
             st.markdown(f"<h2 style='color:#ff7f0e'>{int(weekly_received_cases):,}</h2>", unsafe_allow_html=True)
 
         with kpi3:
-            st.markdown("**Inbound Delivery Performance**")
+            st.markdown("**Inbound On-Time Rate**")
             st.markdown(f"<h2 style='color:#2ca02c'>{weekly_on_time_rate}%</h2>", unsafe_allow_html=True)
         chart_type = st.selectbox(
             "Select a chart to view:",
@@ -372,16 +479,23 @@ elif selected == "Admin Dashboard":
                 .reset_index()
                 .sort_values('year_month')
             )
+            
+            # Convert year_month to alpha-numeric format (Jan 2025)
+            monthly_cases['month_formatted'] = pd.to_datetime(monthly_cases['year_month']).dt.strftime('%b %Y')
+            
+            # Show only last 6 months
+            monthly_cases_recent = monthly_cases.tail(6)
+            
             fig = px.bar(
-                monthly_cases,
-                x='year_month',
+                monthly_cases_recent,
+                x='month_formatted',
                 y='hdr_received_cases_qty',
                 text='hdr_received_cases_qty',
-                title='Inbound Received Cases Per Month',
-                labels={'year_month': 'Month', 'hdr_received_cases_qty': 'Cases Received'}
+                title='Inbound Received Cases Per Month (YTD)',
+                labels={'month_formatted': 'Date', 'hdr_received_cases_qty': 'Cases Received'}
             )
             fig.update_traces(texttemplate='%{text:.2s}', textposition='outside')
-            fig.update_layout(xaxis_title='Month', yaxis_title='Cases Received', title_x=0.5)
+            fig.update_layout(xaxis_title='Date', yaxis_title='Cases Received', title_x=0.5)
             fig.update_xaxes(type='category')
             st.plotly_chart(fig)
 
@@ -405,34 +519,60 @@ elif selected == "Admin Dashboard":
 
     with col_side:
         st.subheader("📅 Monthly Summary")
-        st.markdown("**Inbound Delivery Performance**")
-        st.markdown(f"<h2 style='color:#2ca02c'>{monthly_on_time_rate:.1f}%</h2>", unsafe_allow_html=True)
-        st.markdown("Total Received Cases")
-        st.markdown(f"<h2 style='color:yellow'>{monthly_received_cases} Cases</h2>", unsafe_allow_html=True)
+        st.markdown("---")
+        m_kpi1, m_kpi2 = st.columns(2, gap='small')
+        with m_kpi1:
+            st.markdown("**Inbound On-Time Rate**")
+            st.markdown(f"<h2 style='color:#2ca02c'>{monthly_on_time_rate:.1f}%</h2>", unsafe_allow_html=True)
+        with m_kpi2:
+            st.markdown("**Total Received Cases**")
+            st.markdown(f"<h2 style='color:yellow'>{monthly_received_cases} Cases</h2>", unsafe_allow_html=True)
         
-        # Top 3 customers using metric-style container with list format
-        st.metric(
-            label="🏆 Top 3 Customers by Volume",
-            value="",
-            delta=""
+        # Get top 5 customers data
+        top_5_customers = (
+            monthly_inbound.groupby("received_from_vendor_name")["hdr_received_cases_qty"]
+            .sum()
+            .reset_index()
+            .sort_values(by="hdr_received_cases_qty", ascending=False)
+            .head(5)
         )
-        
-        # Create a formatted list within the metric container space
-        if len(top_customers) >= 1:
-            customer_list = []
-            for i, (customer_name, cases) in enumerate(top_customers[:3]):
-                rank_emoji = ["🥇", "🥈", "🥉"][i]
-                customer_list.append(f"{rank_emoji} {customer_name}: {cases:,}\n")
-            
-            # Display as text in smaller font
-            st.markdown(f"""
-            <div style="font-size: 0.85rem; line-height: 1.4; margin-top: -10px;">
-            {chr(10).join(customer_list)}
-            """, unsafe_allow_html=True)
+
+        # Add bottles on hand (sample data - replace with your actual logic)
+        top_5_customers['bottles_on_hand'] = top_5_customers['hdr_received_cases_qty'] * 12  # Sample: 12 bottles per case
+
+        # Rename columns for display
+        top_5_customers_display = top_5_customers.rename(columns={
+            'Rank': 'Rank',
+            'received_from_vendor_name': 'Customer Name',
+            'bottles_on_hand': 'Bottles on Hand'
+        })
+
+        # Display as dataframe with custom column configuration
+        st.dataframe(
+            top_5_customers_display[['Customer Name', 'Bottles on Hand']],
+            column_config={
+                "Rank": st.column_config.TextColumn(
+                    "Rank",
+                    width="small"
+                ),
+                "Customer Name": st.column_config.TextColumn(
+                    "Top Customers",
+                    width="medium",
+                ),
+                "Bottles on Hand": st.column_config.NumberColumn(
+                    "Bottles on Hand",
+                    format="%d",
+                    width="small"
+                )
+            },
+            hide_index=True,
+            use_container_width=True
+        )
 
 elif selected == "New Customer":
     # New Customer Form
     st.subheader("New Customer Registration")
+    st.markdown("---")
     st.markdown("""
         <style>
         .stFileUploader > div > div > div > div {
@@ -500,4 +640,173 @@ elif selected == "New Customer":
                 st.balloons()
             else:
                 st.error("❌ Please fill in all required fields marked with *")
-#elif selected == "Value Added Services":
+
+
+elif selected == "Value Added Services":
+    # Value Added Services Information
+    st.header("Value Added Services")
+    st.markdown("---")
+    
+    # Service overview metrics
+    st.subheader("📊 Service Overview")
+    
+    service_col1, service_col2, service_col3, service_col4 = st.columns(4)
+    
+    with service_col1:
+        st.metric("Active Repack Orders", "142", delta="12 this week")
+    
+    with service_col2:
+        st.metric("VAP Projects", "28", delta="-3 from last month")
+    
+    with service_col3:
+        st.metric("Labeling Jobs", "89", delta="15 pending")
+    
+    with service_col4:
+        st.metric("Lot-Tracking Items", "1,247", delta="98 new lots")
+    
+    st.markdown("---")
+    
+    # Service utilization chart
+    col_chart1, col_chart2 = st.columns(2)
+    
+    with col_chart1:
+        # Service revenue/volume chart
+        service_data = pd.DataFrame({
+            'Service': ['Repacks', 'VAP', 'Labeling', 'Lot-Tracking'],
+            'Monthly_Volume': [450, 180, 320, 890],
+            'Revenue': [15000, 25000, 8000, 12000]
+        })
+        
+        fig_services = px.bar(
+            service_data, 
+            x='Service', 
+            y='Monthly_Volume',
+            title='Service Volume This Month',
+            color='Service'
+        )
+        st.plotly_chart(fig_services, use_container_width=True)
+    
+    with col_chart2:
+       # Service turnaround times
+        turnaround_data = pd.DataFrame({
+            'Service': ['Repacks', 'VAP', 'Labeling', 'Lot-Tracking'],
+            'Target_Days': [3, 7, 2, 0.5],
+            'Actual_Days': [2.5, 5.2, 3.8, 0.2]
+        })
+        
+        fig_turnaround = px.bar(
+            turnaround_data,
+            x='Service',
+            y=['Target_Days', 'Actual_Days'],
+            title='Average Turnaround Time: Target vs Actual',
+            barmode='group'
+        )
+        st.plotly_chart(fig_turnaround, use_container_width=True)
+
+
+# Initialize session state for chat
+if 'chat_open' not in st.session_state:
+    st.session_state.chat_open = False
+
+# Floating chat button and overlay
+st.markdown(f"""
+<style>
+.floating-chat-btn {{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1001;
+    background: #ff4b4b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}}
+
+.floating-chat-btn:hover {{
+    background: #ff6b6b;
+    transform: scale(1.1);
+}}
+
+.chat-overlay {{
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 1000;
+    border: 1px solid #ddd;
+    display: {'block' if st.session_state.chat_open else 'none'};
+}}
+
+.chat-header {{
+    background: #ff4b4b;
+    color: white;
+    padding: 15px;
+    border-radius: 10px 10px 0 0;
+    font-weight: bold;
+    position: relative;
+}}
+
+.chat-close {{
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}}
+</style>
+
+<div class="chat-overlay">
+    <div class="chat-header">
+        Ankaa Assistant
+        <button class="chat-close" onclick="toggleChat()">×</button>
+    </div>
+    <iframe src="YOUR_DATABRICKS_CHATBOT_URL" 
+            width="100%" 
+            height="440" 
+            frameborder="0"
+            style="border-radius: 0 0 10px 10px;">
+    </iframe>
+</div>
+
+<button class="floating-chat-btn" onclick="toggleChat()">💬</button>
+
+<script>
+function toggleChat() {{
+    // Send message to Streamlit to toggle chat state
+    window.parent.postMessage({{
+        type: 'streamlit:setComponentValue',
+        value: !{str(st.session_state.chat_open).lower()}
+    }}, '*');
+    
+    // Also toggle display immediately for responsiveness
+    var chatOverlay = document.querySelector('.chat-overlay');
+    if (chatOverlay.style.display === 'none') {{
+        chatOverlay.style.display = 'block';
+    }} else {{
+        chatOverlay.style.display = 'none';
+    }}
+}}
+</script>
+""", unsafe_allow_html=True)
+
+# Alternative: Use a hidden button to handle state changes
+col1, col2 = st.columns([10, 1])
+with col2:
+    # This invisible button will handle the actual state change
+    if st.button("", key="chat_toggle", help="Toggle chat", 
+                 label_visibility="collapsed"):
+        st.session_state.chat_open = not st.session_state.chat_open
+        st.rerun()
